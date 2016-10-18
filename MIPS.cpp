@@ -77,21 +77,26 @@ class INSMem
                         IMem[i] = bitset<8>(line);
                         i++;
                      }
-                     
+                     count = i;
                   }
+                  
                   else cout<<"Unable to open file";
                   imem.close();
                      
                   }
                   
-          bitset<32> ReadMemory (bitset<32> ReadAddress) 
-              {    
-               // implement by you. (Read the byte at the ReadAddress and the following three byte).
-               return Instruction;     
-              }     
+                  
+          bitset<32> ReadMemory (bitset<32> ReadAddress) {
+              
+              Instruction = (bitset<32>) (IMem[ReadAddress.to_ulong()].to_string() + IMem[ReadAddress.to_ulong() + 1].to_string() + IMem[ReadAddress.to_ulong() + 2].to_string() + IMem[ReadAddress.to_ulong() + 3].to_string());
+              
+              return Instruction;
+              
+          }
       
       private:
            vector<bitset<8> > IMem;
+           int count = 0;
       
 };
       
@@ -147,7 +152,15 @@ class DataMem
       
 };  
 
-
+/*
+TODO:
+ - Limit memory read to 65536
+ - Decode the instructions
+ - Implement different ALU operations
+ - Figure out how to deal with Registers and Data Memory
+ - Write logic for changing current address to jump address when jump/beq (branch on equal) instruction called
+ - Change if break statement to incorporate halt instruction
+*/
    
 int main()
 {
@@ -155,12 +168,48 @@ int main()
     ALU myALU;
     INSMem myInsMem;
     DataMem myDataMem;
+    
+    INSMem();   //INITIALIZE INSTRUCTION MEMORY
+    DataMem();  //INITIALIZE DATA MEMORY
+    RF();       //INITIALIZE REGISTERS
+    
+    bitset<32> readAddress(0); //INITIALIZE THE FIRST ADDRESS TO READ TO ALL 0's
+    bitset<32> currentInstruction; //INITIALIZE THE CURRENT INSTRUCTION POINTER
+    
+    bitset<6> opCode;
 
     while (1)
 	{
-        // Fetch
+	    
+	    currentInstruction = myInsMem.ReadMemory(readAddress);  //GET CURRENT INSTRUCTION
+	    
+	    if(currentInstruction.to_string() == "11111111111111111111111111111111")    //IF INSTRUCTION ALL 1's TERMINATE THE LOOP/PROGRAM
+	        break;
+	    else {                                                                      // ELSE PERFORM TASKS BASED ON THE INSTRUCTION
+	        cout << currentInstruction.to_string() << endl; //FOR DEBUGGING
+	        
+	        //DECODING THE INSTRUCTION
+	        opCode = (bitset<6>)( currentInstruction.to_string().substr(0, 6) );    //GET THE FIRST 6 BITS FOR THE OPCODE FROM THE CURRENT INSTRUCTION
+	                             
+	        cout << hex << opCode.to_ulong() << endl; //FOR DEBUGGING (Convert to hex with hex << dec/ulong)
+	        
+	        if((hex << opCode.to_ulong()) == 0x0){
+	            //R Type Instruction
+	            
+	        } else
+	            //I or J Type
+	            
+	        }
+	        
+	    }
+	        
+	        
+	    readAddress = readAddress.to_ulong() + 4; //INCREMENT THE PROGRAM COUNTER SO THAT IT READS THE NEXT 32 BIT ADDRESS
+	        
+	    
+        // Fetch - Done
         
-		// If current insturciton is "11111111111111111111111111111111", then break;
+		// If current insturciton is "11111111111111111111111111111111", then break; - Done
         
 		// decode(Read RF)
 		
@@ -170,10 +219,10 @@ int main()
 		
 		// Write back to RF
 		
-        myRF.OutputRF(); // dump RF;    
+        //myRF.OutputRF(); // dump RF (Uncomment the first part)
     }
-        myDataMem.OutputDataMem(); // dump data mem
-      
-        return 0;
+    //myDataMem.OutputDataMem(); // dump data mem
+    
+    return 0;
         
 }
