@@ -170,7 +170,7 @@ class DataMem
                if(readmem == 1)
                     readdata = (bitset<32>) (DMem[Address.to_ulong()].to_string() + DMem[Address.to_ulong() + 1].to_string() + DMem[Address.to_ulong() + 2].to_string() + DMem[Address.to_ulong() + 3].to_string());
                else if(writemem == 1){
-                   cout << "Write Data :" << WriteData << endl;
+                   
                    DMem[Address.to_ulong()] = (bitset<8>)(WriteData.to_string().substr(0, 8));
                    DMem[Address.to_ulong() + 1] = (bitset<8>)(WriteData.to_string().substr(8, 8));
                    DMem[Address.to_ulong() + 2] = (bitset<8>)(WriteData.to_string().substr(16, 8));
