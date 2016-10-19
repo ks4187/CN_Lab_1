@@ -26,19 +26,27 @@ class RF
         {   
             if(WrtEnable == 0){
                 //Read
-                //ReadData1 = Registers[RdReg1.to_ulong()];
-                //ReadData2 = Registers[RdReg2.to_ulong()];
+                ReadData1 = Registers[RdReg1.to_ulong()];
+                ReadData2 = Registers[RdReg2.to_ulong()];
                 
-                ReadData1 = 0xFFFFFFFF;
-                ReadData2 = 0x7FFFFFFE;
+                //ReadData1 = 0xFFFFFFFF;
+                //ReadData2 = 0x7FFFFFFE;
                 
                 cout << "Read Data 1: " << ReadData1 << endl << "Read Data 2: " << ReadData2 << endl;
             } else {
                 //Write
                 Registers[WrtReg.to_ulong()] = WrtData;
-                cout << "Register Write Data = " << Registers[WrtReg.to_ulong()] << endl;
+                cout << "Register Write Data = " << Registers[WrtReg.to_ulong()] << endl << endl;
             }             
          }
+         
+        void signExtend(bitset<16> immData){
+            bitset<16> extend(0);
+            if(immData[0] == 1)
+                extend.set();
+            
+            ReadData2 = (bitset<32>)(extend.to_string() + immData.to_string());
+        }
 		 
 	void OutputRF()
              {
@@ -159,8 +167,17 @@ class DataMem
           }  
           bitset<32> MemoryAccess (bitset<32> Address, bitset<32> WriteData, bitset<1> readmem, bitset<1> writemem) 
           {    
+               if(readmem == 1)
+                    readdata = (bitset<32>) (DMem[Address.to_ulong()].to_string() + DMem[Address.to_ulong() + 1].to_string() + DMem[Address.to_ulong() + 2].to_string() + DMem[Address.to_ulong() + 3].to_string());
+               else if(writemem == 1){
+                   cout << "Write Data :" << WriteData << endl;
+                   DMem[Address.to_ulong()] = (bitset<8>)(WriteData.to_string().substr(0, 8));
+                   DMem[Address.to_ulong() + 1] = (bitset<8>)(WriteData.to_string().substr(8, 8));
+                   DMem[Address.to_ulong() + 2] = (bitset<8>)(WriteData.to_string().substr(16, 8));
+                   DMem[Address.to_ulong() + 3] = (bitset<8>)(WriteData.to_string().substr(24, 8));
+                   
+               }
                
-               // implement by you.
                return readdata;     
           }   
                      
@@ -190,7 +207,7 @@ class DataMem
 TODO:
  - Limit memory read to 65536
  - Decode the instructions
- - Implement different ALU operations
+ - Implement different ALU operations - Done
  - Figure out how to deal with Registers and Data Memory
  - Write logic for changing current address to jump address when jump/beq (branch on equal) instruction called
  - Send 001 to ALU for I type coz we are adding ReadData1 and Sign Extended Immediate
@@ -212,6 +229,8 @@ int main()
     
     bitset<6> opCode;
     bitset<32> ALUResult;
+    bitset<32> DataMemResult;
+    bitset<32> readData2;
 
     while (1)
 	{
@@ -255,10 +274,72 @@ int main()
 	        //I Type Instruction
 	        //cout << "I Type" << endl;
 	        
+	        //Read From Registers
+	        myRF.ReadWrite((bitset<5>) currentInstruction.to_string().substr(6, 5),
+	                      (bitset<5>) currentInstruction.to_string().substr(11, 5),
+	                      (bitset<5>) currentInstruction.to_string().substr(11, 5),
+	                      (bitset<32>) (0),
+	                      (bitset<1>) (0)
+	                    );
+	                    
+	        readData2 = myRF.ReadData2;
+	        
+	        //Sign Extend Imm            
+	        myRF.signExtend((bitset<16>) currentInstruction.to_string().substr(16, 16));
+	        
+	        //Send to ALU
+	        ALUResult = myALU.ALUOperation((bitset<3>) 0x1,
+	                                       myRF.ReadData1,
+	                                       myRF.ReadData2
+	                                       );
+	        
+	        
+	        
+	        if(opCode.to_ulong() == 0x09){  //addiu
+	        
+	            //Write to Register
+	            myRF.ReadWrite((bitset<5>) currentInstruction.to_string().substr(6, 5),
+	                      (bitset<5>) currentInstruction.to_string().substr(11, 5),
+	                      (bitset<5>) currentInstruction.to_string().substr(11, 5),
+	                      ALUResult,
+	                      (bitset<1>) (1)
+	                    );
+	                    
+	        }else if(opCode.to_ulong() == 0x23){
+	            //Load Instruction
+	            
+	            //Read from Data Memory
+	            DataMemResult = myDataMem.MemoryAccess(ALUResult,
+	                                                   (bitset<32>)(0),
+	                                                   (bitset<1>)(1),
+	                                                   (bitset<1>)(0));
+	                                                   
+	            cout << "Data Memory: " << DataMemResult << endl;
+	            
+	            //Write to Register
+	            myRF.ReadWrite((bitset<5>) currentInstruction.to_string().substr(6, 5),
+	                      (bitset<5>) currentInstruction.to_string().substr(11, 5),
+	                      (bitset<5>) currentInstruction.to_string().substr(11, 5),
+	                      DataMemResult,
+	                      (bitset<1>) (1)
+	                    );
+	            
+	        } else if(opCode.to_ulong() == 0x2B){
+	            //Store Instruction
+	            
+	            //Write to Data Memory
+	            DataMemResult = myDataMem.MemoryAccess(ALUResult,
+	                                                   readData2,
+	                                                   (bitset<1>)(0),
+	                                                   (bitset<1>)(1));
+	        }
+	        
+	        
 	    } else{
 	        
 	        //J Type Instruction
 	        //cout << "J Type" << endl;
+	        
 	        
 	        if(opCode.to_ulong() == 0x02){
 	            //Jump Instruction
