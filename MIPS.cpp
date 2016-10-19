@@ -15,7 +15,7 @@ using namespace std;
 class RF
 {
     public:
-        bitset<32> ReadData1, ReadData2; 
+        bitset<32> ReadData1, ReadData2, signExtendImm; 
      	RF()
     	{ 
           Registers.resize(32);  
@@ -45,7 +45,7 @@ class RF
             if(immData[0] == 1)
                 extend.set();
             
-            ReadData2 = (bitset<32>)(extend.to_string() + immData.to_string());
+            signExtendImm = (bitset<32>)(extend.to_string() + immData.to_string());
         }
 		 
 	void OutputRF()
@@ -230,7 +230,7 @@ int main()
     bitset<6> opCode;
     bitset<32> ALUResult;
     bitset<32> DataMemResult;
-    bitset<32> readData2;
+    int beqFlag = 0, jFlag = 0;
 
     while (1)
 	{
@@ -282,7 +282,7 @@ int main()
 	                      (bitset<1>) (0)
 	                    );
 	                    
-	        readData2 = myRF.ReadData2;
+	        
 	        
 	        //Sign Extend Imm            
 	        myRF.signExtend((bitset<16>) currentInstruction.to_string().substr(16, 16));
@@ -290,7 +290,7 @@ int main()
 	        //Send to ALU
 	        ALUResult = myALU.ALUOperation((bitset<3>) 0x1,
 	                                       myRF.ReadData1,
-	                                       myRF.ReadData2
+	                                       myRF.signExtendImm
 	                                       );
 	        
 	        
@@ -329,9 +329,19 @@ int main()
 	            
 	            //Write to Data Memory
 	            DataMemResult = myDataMem.MemoryAccess(ALUResult,
-	                                                   readData2,
+	                                                   myRF.ReadData2,
 	                                                   (bitset<1>)(0),
 	                                                   (bitset<1>)(1));
+	        } else if(opCode.to_ulong() == 0x04){
+	            //Branch on Equal (beq) Instruction
+	            
+	            if(myRF.ReadData1 == myRF.ReadData2){
+	                
+	                beqFlag = 1;
+	                readAddress = readAddress.to_ulong() + 4 +
+	                              ((bitset<30>)(myRF.signExtendImm.to_string().substr(0, 30))).to_ulong() +
+	                              ((bitset<2>)(0)).to_ulong();
+	            }
 	        }
 	        
 	        
@@ -343,6 +353,12 @@ int main()
 	        
 	        if(opCode.to_ulong() == 0x02){
 	            //Jump Instruction
+	            
+	            jFlag = 1;
+	            readAddress = ((bitset<4>)((bitset<32>)(readAddress.to_ulong() + 4)).to_string().substr(0, 4)).to_ulong() +
+	                            ((bitset<26>)(currentInstruction.to_string().substr(6, 26))).to_ulong() +
+	                            ((bitset<2>)(0)).to_ulong();
+	            
 	        }
 	        else if(opCode.to_ulong() == 0x3F)
 	            break;  //Halt Instruction
@@ -352,21 +368,13 @@ int main()
 	        }
 	            
 	    }
-	        
-	    readAddress = readAddress.to_ulong() + 4; //INCREMENT THE PROGRAM COUNTER SO THAT IT READS THE NEXT 32 BIT ADDRESS
-	        
 	    
-        // Fetch - Done
-        
-		// If current insturciton is "11111111111111111111111111111111", then break; - Done
-        
-		// decode(Read RF)
-		
-		// Execute
-		
-		// Read/Write Mem
-		
-		// Write back to RF
+	    if(!beqFlag && !jFlag)
+	        readAddress = readAddress.to_ulong() + 4; //INCREMENT THE PROGRAM COUNTER SO THAT IT READS THE NEXT 32 BIT ADDRESS
+	    else{
+	        beqFlag = 0;
+	        jFlag = 0;
+	    }
 		
         //myRF.OutputRF(); // dump RF (Uncomment the first part)
     }
