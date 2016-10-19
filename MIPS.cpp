@@ -24,7 +24,20 @@ class RF
 	
         void ReadWrite(bitset<5> RdReg1, bitset<5> RdReg2, bitset<5> WrtReg, bitset<32> WrtData, bitset<1> WrtEnable)
         {   
-            // implement the funciton by you.                
+            if(WrtEnable == 0){
+                //Read
+                //ReadData1 = Registers[RdReg1.to_ulong()];
+                //ReadData2 = Registers[RdReg2.to_ulong()];
+                
+                ReadData1 = 0xFFFFFFFF;
+                ReadData2 = 0x7FFFFFFE;
+                
+                cout << "Read Data 1: " << ReadData1 << endl << "Read Data 2: " << ReadData2 << endl;
+            } else {
+                //Write
+                Registers[WrtReg.to_ulong()] = WrtData;
+                cout << "Register Write Data = " << Registers[WrtReg.to_ulong()] << endl;
+            }             
          }
 		 
 	void OutputRF()
@@ -55,9 +68,30 @@ class ALU
              bitset<32> ALUresult;
              bitset<32> ALUOperation (bitset<3> ALUOP, bitset<32> oprand1, bitset<32> oprand2)
              {   
-                 // implement the ALU operations by you. 
+                 
+                 switch(ALUOP.to_ulong()){
+                     case 0x1:
+                        ALUresult = (bitset<32>) (oprand1.to_ulong() + oprand2.to_ulong());
+                        break;
+                    case 0x3:
+                        
+                        break;
+                    case 0x4:
+                        
+                        break;
+                    case 0x5:
+                        
+                        break;
+                    case 0x7:
+                        
+                        break;
+                    default:
+                        break;
+                     
+                 }
+                 
                  return ALUresult;
-               }            
+             }            
 };
 
 class INSMem
@@ -159,7 +193,7 @@ TODO:
  - Implement different ALU operations
  - Figure out how to deal with Registers and Data Memory
  - Write logic for changing current address to jump address when jump/beq (branch on equal) instruction called
- - Change if break statement to incorporate halt instruction
+ - Send 001 to ALU for I type coz we are adding ReadData1 and Sign Extended Immediate
 */
    
 int main()
@@ -177,32 +211,66 @@ int main()
     bitset<32> currentInstruction; //INITIALIZE THE CURRENT INSTRUCTION POINTER
     
     bitset<6> opCode;
+    bitset<32> ALUResult;
 
     while (1)
 	{
 	    
 	    currentInstruction = myInsMem.ReadMemory(readAddress);  //GET CURRENT INSTRUCTION
 	    
-	    if(currentInstruction.to_string() == "11111111111111111111111111111111")    //IF INSTRUCTION ALL 1's TERMINATE THE LOOP/PROGRAM
-	        break;
-	    else {                                                                      // ELSE PERFORM TASKS BASED ON THE INSTRUCTION
-	        cout << currentInstruction.to_string() << endl; //FOR DEBUGGING
+	    //cout << currentInstruction.to_string() << endl; //FOR DEBUGGING
 	        
-	        //DECODING THE INSTRUCTION
-	        opCode = (bitset<6>)( currentInstruction.to_string().substr(0, 6) );    //GET THE FIRST 6 BITS FOR THE OPCODE FROM THE CURRENT INSTRUCTION
+	    //DECODING THE INSTRUCTION
+	    opCode = (bitset<6>)( currentInstruction.to_string().substr(0, 6) );    //GET THE FIRST 6 BITS FOR THE OPCODE FROM THE CURRENT INSTRUCTION
 	                             
-	        cout << hex << opCode.to_ulong() << endl; //FOR DEBUGGING (Convert to hex with hex << dec/ulong)
+	    //cout << hex << opCode.to_ulong() << "  "; //FOR DEBUGGING (Convert to hex with hex << dec/ulong)
 	        
-	        if((hex << opCode.to_ulong()) == 0x0){
-	            //R Type Instruction
-	            
-	        } else
-	            //I or J Type
-	            
+	    if(opCode.to_ulong() == 0x0){
+	        //R Type Instruction
+	        //cout << "R Type" << endl;
+	        
+	        //Read From Registers
+	        myRF.ReadWrite((bitset<5>) currentInstruction.to_string().substr(6, 5),
+	                      (bitset<5>) currentInstruction.to_string().substr(11, 5),
+	                      (bitset<5>) currentInstruction.to_string().substr(16, 5),
+	                      (bitset<32>) (0),
+	                      (bitset<1>) (0)
+	                    );
+	        
+	        //Send to ALU
+	        ALUResult = myALU.ALUOperation((bitset<3>) currentInstruction.to_string().substr(29, 3),
+	                                       myRF.ReadData1,
+	                                       myRF.ReadData2
+	                                       );
+	        
+	        //Write to Register
+	        myRF.ReadWrite((bitset<5>) currentInstruction.to_string().substr(6, 5),
+	                      (bitset<5>) currentInstruction.to_string().substr(11, 5),
+	                      (bitset<5>) currentInstruction.to_string().substr(16, 5),
+	                      ALUResult,
+	                      (bitset<1>) (1)
+	                    );
+	        
+	    } else if(opCode.to_ulong() != 0x02 && opCode.to_ulong() != 0x3F){
+	        //I Type Instruction
+	        //cout << "I Type" << endl;
+	        
+	    } else{
+	        
+	        //J Type Instruction
+	        //cout << "J Type" << endl;
+	        
+	        if(opCode.to_ulong() == 0x02){
+	            //Jump Instruction
 	        }
-	        
+	        else if(opCode.to_ulong() == 0x3F)
+	            break;  //Halt Instruction
+	        else{
+	            cout << "UNRECOGNIZED OPCODE\nTERMINATING THE PROGRAM" << endl;
+	            break;
+	        }
+	            
 	    }
-	        
 	        
 	    readAddress = readAddress.to_ulong() + 4; //INCREMENT THE PROGRAM COUNTER SO THAT IT READS THE NEXT 32 BIT ADDRESS
 	        
