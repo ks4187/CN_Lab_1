@@ -74,16 +74,16 @@ class ALU
                         ALUresult = (bitset<32>) (oprand1.to_ulong() + oprand2.to_ulong());
                         break;
                     case 0x3:
-                        
+                        ALUresult = (bitset<32>) (oprand1.to_ulong() - oprand2.to_ulong());
                         break;
                     case 0x4:
-                        
+                        ALUresult = oprand1 & oprand2;
                         break;
                     case 0x5:
-                        
+                        ALUresult = oprand1 | oprand2;
                         break;
                     case 0x7:
-                        
+                        ALUresult = ~ (oprand1 | oprand2);
                         break;
                     default:
                         break;
